@@ -1,0 +1,59 @@
+import liquibase.Contexts
+import liquibase.LabelExpression
+import org.h2.jdbcx.JdbcDataSource
+import liquibase.Liquibase
+import liquibase.database.jvm.JdbcConnection
+import liquibase.resource.ClassLoaderResourceAccessor
+
+apply plugin: 'java'
+apply plugin: 'idea'
+
+buildscript {
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.h2database:h2:1.4.197'
+        classpath "org.liquibase:liquibase-core:3.6.2"
+        classpath 'org.liquibase:liquibase-groovy-dsl:2.0.1'
+        classpath files('src/main/resources')
+    }
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+   mavenCentral()
+}
+
+allprojects {
+    group 'com.hoolyhouse'
+    version '1.0-SNAPSHOT'
+}
+
+def generateSchema() {
+    println "Starting in-memory DB..."
+    JdbcDataSource ds = new JdbcDataSource()
+    ds.setURL("jdbc:h2:mem:gen;DB_CLOSE_DELAY=-1")
+    ds.setUser("sa")
+    ds.setPassword("")
+
+    println "Running liquibase change sets..."
+    def c = ds.getConnection()
+    def liquiDbConnection = new JdbcConnection(c)
+    def liquibase = new Liquibase("com/example/db.changelog.groovy",
+            new ClassLoaderResourceAccessor(),
+            liquiDbConnection)
+    liquibase.ignoreClasspathPrefix = false
+    liquibase.update(new Contexts(), new LabelExpression())
+}
+
+task generateModel {
+    doLast {
+        generateSchema()
+    }
+}
+
+build.dependsOn(generateModel)
